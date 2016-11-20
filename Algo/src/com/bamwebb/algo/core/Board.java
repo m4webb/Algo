@@ -47,19 +47,19 @@ public class Board {
     }
     
     public ReadOnlyList<Piece> getPieces() {
-        return locationPieces.valuesList();
+        return pieceLocations.keyList();
     }
     
     public ReadOnlyList<Piece> getOpponentPieces() {
-        return locationOpponentPieces.valuesList();
+        return opponentPieceLocations.keyList();
     }
     
     public ReadOnlyList<Location> getLocations() {
-        return pieceLocations.valuesList();
+        return locationPieces.keyList();
     }
     
     public ReadOnlyList<Location> getOpponentLocations() {
-        return opponentPieceLocations.valuesList();
+        return locationOpponentPieces.keyList();
     }
     
     public Square getSquare(Location location) {

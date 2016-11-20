@@ -52,6 +52,10 @@ public class Location {
         return getIndex();
     }
     
+    public boolean equals(Location location) {
+        return location.getX() == x && location.getY() == y;
+    }
+    
     public Location(int x, int y) throws LocationDoesNotExist {
         if(x < 0 || x >= Configuration.MAX_X || y < 0 || y >= Configuration.MAX_Y){
             throw new LocationDoesNotExist();

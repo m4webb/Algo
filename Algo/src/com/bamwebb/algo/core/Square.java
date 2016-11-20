@@ -17,11 +17,6 @@ public class Square {
 	final private State state;
 	final private Terrain terrain;
 	
-	@Override
-	public int hashCode() {
-	    return location.hashCode();
-	}
-	
 	public Square(Location location, State state, Terrain terrain) {
 		this.location = location;
 		this.state = state;

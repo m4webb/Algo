@@ -19,7 +19,11 @@ public class ReadOnlyMap<A, B> {
         return map.get(a);
     }
     
-    public ReadOnlyList<B> valuesList() {
+    public ReadOnlyList<A> keyList() {
+        return new ReadOnlyList<A>(new ArrayList<A>(map.keySet()));
+    }
+    
+    public ReadOnlyList<B> valueList() {
         return new ReadOnlyList<B>(new ArrayList<B>(map.values()));
     }
 }

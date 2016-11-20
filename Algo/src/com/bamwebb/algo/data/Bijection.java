@@ -1,5 +1,6 @@
 package com.bamwebb.algo.data;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -90,5 +91,13 @@ public class Bijection<A,B> {
     
     public ReadOnlyMap<B,A> getBackwardReadOnlyMap() {
         return new ReadOnlyMap<B,A>(mapBA);
+    }
+    
+    public ReadOnlyList<A> getDomain() {
+        return new ReadOnlyList<A>(new ArrayList<A>(mapAB.keySet()));
+    }
+    
+    public ReadOnlyList<B> getCodomain() {
+        return new ReadOnlyList<B>(new ArrayList<B>(mapBA.keySet()));
     }
 }

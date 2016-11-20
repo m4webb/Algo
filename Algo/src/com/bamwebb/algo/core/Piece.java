@@ -39,6 +39,10 @@ public class Piece {
 	    return uuid.hashCode();
 	}
 	
+	public boolean equals(Piece piece) {
+	    return piece.getUuid() == uuid;
+	}
+	
 	public Piece(int strength, int toughness, int speed, int reach, int sight, int glory) {
 		this.strength = strength;
 		this.toughness = toughness;
