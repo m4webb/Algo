@@ -1,4 +1,4 @@
-package com.bamwebb.data;
+package com.bamwebb.algo.data;
 
 public class ReadOnlyArray<T> {
 

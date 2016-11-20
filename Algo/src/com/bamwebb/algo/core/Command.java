@@ -1,4 +1,4 @@
-package com.bamwebb.algo;
+package com.bamwebb.algo.core;
 
 public class Command {
 	

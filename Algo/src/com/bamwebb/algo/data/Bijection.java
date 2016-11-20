@@ -1,4 +1,4 @@
-package com.bamwebb.data;
+package com.bamwebb.algo.data;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -20,12 +20,25 @@ public class Bijection<A,B> {
         mapBA = new HashMap<B, A>();
     }
     
+    public void clear() {
+        mapAB.clear();
+        mapBA.clear();
+    }
+    
     public void addPairing(A a, B b) throws BijectionException {
         if(mapAB.containsKey(a) || mapBA.containsKey(b)) {
             throw new Bijection.BijectionException("Pairing does not contain new values.");
         }
         mapAB.put(a, b);
         mapBA.put(b, a);
+    }
+    
+    public boolean domainContains(A a) {
+        return mapAB.containsKey(a);
+    }
+    
+    public boolean codomainContains(B b) {
+        return mapBA.containsKey(b);
     }
 
     public B mapForward(A a) throws BijectionException {
@@ -69,5 +82,13 @@ public class Bijection<A,B> {
             mapAB.remove(a);
             mapBA.remove(b);
         }
+    }
+    
+    public ReadOnlyMap<A,B> getForwardReadOnlyMap() {
+        return new ReadOnlyMap<A,B>(mapAB);
+    }
+    
+    public ReadOnlyMap<B,A> getBackwardReadOnlyMap() {
+        return new ReadOnlyMap<B,A>(mapBA);
     }
 }

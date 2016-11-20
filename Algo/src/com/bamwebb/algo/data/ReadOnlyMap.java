@@ -1,4 +1,4 @@
-package com.bamwebb.data;
+package com.bamwebb.algo.data;
 
 import java.util.ArrayList;
 import java.util.Map;
