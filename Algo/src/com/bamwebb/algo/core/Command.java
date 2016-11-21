@@ -8,6 +8,7 @@ public class Command {
 		DEPLOY,
 		FARM,
 		RAZE,
+		SURRENDER,
 	}
 
 	final private Word word;

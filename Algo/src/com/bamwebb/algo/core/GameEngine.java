@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import com.bamwebb.algo.core.Coffer.CofferEmpty;
 import com.bamwebb.algo.core.Location.LocationDoesNotExist;
 import com.bamwebb.algo.data.Bijection;
 import com.bamwebb.algo.data.Bijection.BijectionException;
@@ -22,13 +23,11 @@ public class GameEngine {
     private UUID game;
     private int winner;
     private int turn;
-    private int player1Resources;
-    private int player2Resources;
+    private Coffer player1Coffer;
+    private Coffer player2Coffer;
     private Square[] squares;
     private Square[] player1Squares;
     private Square[] player2Squares;
-    private Boolean[] player1Fog;
-    private Boolean[] player2Fog;
     private Bijection<Piece, Location> player1PieceLocations;
     private Bijection<Piece, Location> player1Player2PieceLocations;
     private Bijection<Piece, Location> player2PieceLocations;
@@ -36,15 +35,18 @@ public class GameEngine {
     // TODO: Add grave yard.
     
     // Resolution
+    private Boolean[] player1Fog;
+    private Boolean[] player2Fog;
     private int[] player1Emissions;
     private int[] player2Emissions;
-    private int[] player1Arrivals;
-    private int[] player2Arrivals;
+    private int[] player1Occupancy;
+    private int[] player2Occupancy;
      
     private FullGameState getFullGameState() {
-        return new FullGameState(game, turn, winner, player1Resources, player2Resources, new ReadOnlyArray<Square>(squares),
-                player1PieceLocations.getForwardReadOnlyMap(), player2PieceLocations.getForwardReadOnlyMap(),
-                player2PieceLocations.getBackwardReadOnlyMap(), player2PieceLocations.getBackwardReadOnlyMap());
+        return new FullGameState(game, turn, winner, player1Coffer.getReadOnlyCoffer(), player2Coffer.getReadOnlyCoffer(),
+                new ReadOnlyArray<Square>(squares), player1PieceLocations.getForwardReadOnlyMap(),
+                player2PieceLocations.getForwardReadOnlyMap(), player2PieceLocations.getBackwardReadOnlyMap(),
+                player2PieceLocations.getBackwardReadOnlyMap());
     }
 
     private GameState getPlayerGameState(Perspective perspective) {
@@ -53,12 +55,12 @@ public class GameEngine {
             board = new Board(new ReadOnlyArray<Square>(player1Squares), player1PieceLocations.getForwardReadOnlyMap(),
                     player1Player2PieceLocations.getForwardReadOnlyMap(), player1PieceLocations.getBackwardReadOnlyMap(),
                     player1Player2PieceLocations.getBackwardReadOnlyMap());
-            return new GameState(game, winner, turn, player1Resources, board);
+            return new GameState(game, winner, turn, player1Coffer.getReadOnlyCoffer(), board);
         } else {
             board = new Board(new ReadOnlyArray<Square>(player2Squares), player2PieceLocations.getForwardReadOnlyMap(),
                    player2Player1PieceLocations.getForwardReadOnlyMap(), player2PieceLocations.getBackwardReadOnlyMap(),
                         player2Player1PieceLocations.getBackwardReadOnlyMap());
-            return new GameState(game, winner, turn, player2Resources, board);
+            return new GameState(game, winner, turn, player2Coffer.getReadOnlyCoffer(), board);
         }
     }
     
@@ -82,28 +84,35 @@ public class GameEngine {
         //
         
         do {
-            countArrivals(player1Commands, player1PieceLocations, player1Arrivals);
-            removeCollisions(player1Commands, player1PieceLocations, player1Arrivals);
-        } while (anyCollisions(player1Arrivals));
+            countOccupancy(player1Commands, player1PieceLocations, player1Occupancy);
+            removeCollisions(player1Commands, player1PieceLocations, player1Occupancy);
+        } while (anyCollisions(player1Occupancy));
         
         movePieces(player1Commands, player1PieceLocations);
         
         do {
-            countArrivals(player2Commands, player2PieceLocations, player2Arrivals);
-            removeCollisions(player2Commands, player2PieceLocations, player2Arrivals);
-        } while (anyCollisions(player2Arrivals));
+            countOccupancy(player2Commands, player2PieceLocations, player2Occupancy);
+            removeCollisions(player2Commands, player2PieceLocations, player2Occupancy);
+        } while (anyCollisions(player2Occupancy));
         
         movePieces(player2Commands, player2PieceLocations);
         
+        //
         // Resolve deployment.
+        //
         
-        // Resolve farming.
+        deployPieces(player1Commands, player1PieceLocations, player1Coffer, player1Squares);
         
-        // Resolve razing.
+        // TODO: Resolve farming.
         
-        // Add resources.
+        // TODO: Resolve razing.
         
-        // Check win condition.
+        // TODO: Add coffer.
+        
+        player1Coffer.deposit(64);
+        player2Coffer.deposit(64);
+        
+        // TODO: Check win condition.
         
         //
         // Apply fog to resulting game state.
@@ -112,7 +121,55 @@ public class GameEngine {
         applyFog(squares, player1Fog, player1Squares, player2PieceLocations, player1Player2PieceLocations, false);
         applyFog(squares, player2Fog, player2Squares, player1PieceLocations, player2Player1PieceLocations, true);
         
+        turn += 1;
+        
         return;
+    }
+    
+    private static void deployPieces(Map<Piece, Command> commands, Bijection<Piece, Location> pieceLocations,
+            Coffer coffer, Square[] squares) throws InvariantViolation {
+        Iterator<Map.Entry<Piece, Command>> iterator = commands.entrySet().iterator();
+        Map.Entry<Piece, Command> entry;
+        Piece newPiece;
+        Location target;
+        Square square;
+        Command command;
+        int cost;
+        
+        try {
+            while(iterator.hasNext()) {
+                entry = iterator.next();
+                command = entry.getValue();
+                if (command.getWord() != Command.Word.DEPLOY) {
+                    continue;
+                }
+                newPiece = entry.getKey();
+                if (pieceLocations.domainContains(newPiece)) {
+                    // There is a small probability that a new piece a player generates will be
+                    // the cosmic twin of one of their existing pieces (share UUIDs). If this
+                    // happens, the universe will unfortunately disallow it from existing on the
+                    // same plane. This is a feature.
+                    continue;
+                }
+                target = command.getTarget();
+                if (pieceLocations.codomainContains(target)) {
+                    continue;
+                }
+                square = squares[target.getIndex()];
+                if (!square.isDeployable()) {
+                    continue;
+                }
+                cost = Piece.cost(newPiece);
+                coffer.withdraw(cost);
+                try {
+                    pieceLocations.addPairing(newPiece, target);
+                } catch (BijectionException exception) {
+                    throw new InvariantViolation();
+                }
+            }
+        } catch (CofferEmpty exception) {
+            return;
+        }   
     }
     
     private static void movePieces(Map<Piece, Command> playerCommands, Bijection<Piece, Location> playerPieceLocations)
@@ -154,7 +211,7 @@ public class GameEngine {
     }
     
     private static void removeCollisions(Map<Piece, Command> playerCommands, Bijection<Piece, Location> playerPieceLocations,
-            int[] playerArrivals) throws InvariantViolation {
+            int[] playerOccupancy) throws InvariantViolation {
         Iterator<Map.Entry<Piece, Command>> iterator = playerCommands.entrySet().iterator();
         Map.Entry<Piece, Command> entry;
         Piece playerPiece, storedPiece;
@@ -181,21 +238,21 @@ public class GameEngine {
             if (Location.distance(pieceLocation, target) > storedPiece.getSpeed()) {
                 continue;
             }
-            if (playerArrivals[target.getIndex()] > 1) {
+            if (playerOccupancy[target.getIndex()] > 1) {
                 iterator.remove();
             }
         }
     }
    
-    private static void countArrivals(Map<Piece, Command> playerCommands, Bijection<Piece, Location> playerPieceLocations,
-            int[] playerArrivals) throws InvariantViolation {
+    private static void countOccupancy(Map<Piece, Command> playerCommands, Bijection<Piece, Location> playerPieceLocations,
+            int[] playerOccupancy) throws InvariantViolation {
         Command command;
         Location pieceLocation, target;
         Piece storedPiece;
         Enumeration<Piece> allPieces = playerPieceLocations.getDomain().enumerate();
         
         for (int i=0; i<Configuration.MAX_INDEX; i++) {
-            playerArrivals[i] = 0;
+            playerOccupancy[i] = 0;
         }
         
         while(allPieces.hasMoreElements()) {
@@ -206,26 +263,26 @@ public class GameEngine {
                 throw new InvariantViolation();
             }
             if (!playerCommands.containsKey(storedPiece)) {
-                playerArrivals[pieceLocation.getIndex()] += 1;
+                playerOccupancy[pieceLocation.getIndex()] += 1;
                 continue;
             }
             command = playerCommands.get(storedPiece);
             if (command.getWord() != Command.Word.MOVE) {
-                playerArrivals[pieceLocation.getIndex()] += 1;
+                playerOccupancy[pieceLocation.getIndex()] += 1;
                 continue;
             }
             target = command.getTarget();
             if (Location.distance(target, pieceLocation) > storedPiece.getSpeed()) {
-                playerArrivals[pieceLocation.getIndex()] += 1;
+                playerOccupancy[pieceLocation.getIndex()] += 1;
                 continue;
             }
-            playerArrivals[target.getIndex()] += 1;
+            playerOccupancy[target.getIndex()] += 1;
         }
     }
     
-    private static boolean anyCollisions(int[] playerArrivals) {
+    private static boolean anyCollisions(int[] playerOccupancy) {
         for (int i=0; i<Configuration.MAX_INDEX; i++) {
-            if (playerArrivals[i] > 1) return true;
+            if (playerOccupancy[i] > 1) return true;
         }
         return false;
     }
@@ -290,6 +347,8 @@ public class GameEngine {
         Piece piece;
         int squaresIndex;
         
+        // TODO: Actually compute fog.
+        
         for (int i=0; i<Configuration.MAX_INDEX; i++) {
             if (invertSquaresIndex) {
                 squaresIndex = Configuration.MAX_INDEX - i - 1;
@@ -319,8 +378,8 @@ public class GameEngine {
         game = UUID.randomUUID();
         turn = 0;
         winner = 0;
-        player1Resources = Configuration.INITIAL_RESOURCES;
-        player2Resources = Configuration.INITIAL_RESOURCES;
+        player1Coffer = new Coffer(Configuration.INITIAL_COFFER_AMOUNT);
+        player2Coffer = new Coffer(Configuration.INITIAL_COFFER_AMOUNT);
         squares = new Square[Configuration.MAX_INDEX];
         player2Squares = new Square[Configuration.MAX_INDEX];
         player2Squares = new Square[Configuration.MAX_INDEX];

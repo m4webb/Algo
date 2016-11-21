@@ -2,19 +2,21 @@ package com.bamwebb.algo.core;
 
 import java.util.UUID;
 
+import com.bamwebb.algo.core.Coffer.ReadOnlyCoffer;
+
 final public class GameState {
 	
     final private UUID game;
     final private int winner;
 	final private int turn;
-	final private int resources;
+	final private ReadOnlyCoffer coffer;
 	final private Board board;
 	
-	public GameState(UUID game, int winner, int turn, int resources, Board board) {
+	public GameState(UUID game, int winner, int turn, ReadOnlyCoffer coffer, Board board) {
 	    this.game = game;
 	    this.winner = winner;
 		this.turn = turn;
-		this.resources = resources;
+		this.coffer = coffer;
 		this.board = board;
 	}
 	
@@ -30,8 +32,8 @@ final public class GameState {
 		return turn;
 	}
     
-    public int getResources() {
-        return resources;
+    public ReadOnlyCoffer getCoffer() {
+        return coffer;
     }
 	
 	public Board getBoard() {

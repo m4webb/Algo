@@ -46,4 +46,8 @@ public class Square {
 	public Square setTerrain(Terrain terrain) {
 	    return new Square(location, state, terrain);
 	}
+	
+	public boolean isDeployable() {
+	    return location.getX() < Configuration.DEPLOY_HORIZON && location.getY() < Configuration.DEPLOY_HORIZON;
+	}
 }
