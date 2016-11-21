@@ -42,7 +42,7 @@ public class Board {
         return locationPieces;
     }
     
-    public ReadOnlyMap<Location, Piece> getOpponentLocationPieces() {
+    public ReadOnlyMap<Location, Piece> getlocationOpponentPieces() {
         return locationOpponentPieces;
     }
     

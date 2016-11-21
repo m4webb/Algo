@@ -1,4 +1,4 @@
-package com.bamwebb.algo.pieces;
+package com.bamwebb.algo.zombies;
 
 import java.util.ArrayList;
 import java.util.Enumeration;
