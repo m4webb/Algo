@@ -25,9 +25,10 @@ public class GameEngine {
     private int turn;
     private Coffer player1Coffer;
     private Coffer player2Coffer;
-    private Square[] squares;
     private Square[] player1Squares;
     private Square[] player2Squares;
+    private Square[] player1VisibleSquares;
+    private Square[] player2VisibleSquares;
     private Bijection<Piece, Location> player1PieceLocations;
     private Bijection<Piece, Location> player1Player2PieceLocations;
     private Bijection<Piece, Location> player2PieceLocations;
@@ -35,29 +36,29 @@ public class GameEngine {
     // TODO: Add grave yard.
     
     // Resolution
-    private Boolean[] player1Fog;
-    private Boolean[] player2Fog;
+    private boolean[] player1Fog;
+    private boolean[] player2Fog;
     private int[] player1Emissions;
     private int[] player2Emissions;
     private int[] player1Occupancy;
     private int[] player2Occupancy;
      
     private FullGameState getFullGameState() {
-        return new FullGameState(game, turn, winner, player1Coffer.getReadOnlyCoffer(), player2Coffer.getReadOnlyCoffer(),
-                new ReadOnlyArray<Square>(squares), player1PieceLocations.getForwardReadOnlyMap(),
-                player2PieceLocations.getForwardReadOnlyMap(), player2PieceLocations.getBackwardReadOnlyMap(),
-                player2PieceLocations.getBackwardReadOnlyMap());
+        return new FullGameState(game, winner, turn, player1Coffer.getReadOnlyCoffer(), player2Coffer.getReadOnlyCoffer(),
+                new ReadOnlyArray<Square>(player1Squares), new ReadOnlyArray<Square>(player2Squares), 
+                player1PieceLocations.getForwardReadOnlyMap(), player2PieceLocations.getForwardReadOnlyMap(),
+                player1PieceLocations.getBackwardReadOnlyMap(), player2PieceLocations.getBackwardReadOnlyMap());
     }
 
     private GameState getPlayerGameState(Perspective perspective) {
         Board board;
         if(perspective == Perspective.PLAYER_ONE) {
-            board = new Board(new ReadOnlyArray<Square>(player1Squares), player1PieceLocations.getForwardReadOnlyMap(),
+            board = new Board(new ReadOnlyArray<Square>(player1VisibleSquares), player1PieceLocations.getForwardReadOnlyMap(),
                     player1Player2PieceLocations.getForwardReadOnlyMap(), player1PieceLocations.getBackwardReadOnlyMap(),
                     player1Player2PieceLocations.getBackwardReadOnlyMap());
             return new GameState(game, winner, turn, player1Coffer.getReadOnlyCoffer(), board);
         } else {
-            board = new Board(new ReadOnlyArray<Square>(player2Squares), player2PieceLocations.getForwardReadOnlyMap(),
+            board = new Board(new ReadOnlyArray<Square>(player2VisibleSquares), player2PieceLocations.getForwardReadOnlyMap(),
                    player2Player1PieceLocations.getForwardReadOnlyMap(), player2PieceLocations.getBackwardReadOnlyMap(),
                         player2Player1PieceLocations.getBackwardReadOnlyMap());
             return new GameState(game, winner, turn, player2Coffer.getReadOnlyCoffer(), board);
@@ -101,7 +102,8 @@ public class GameEngine {
         // Resolve deployment.
         //
         
-        deployPieces(player1Commands, player1PieceLocations, player1Coffer, player1Squares);
+        deployPieces(player1Commands, player1PieceLocations, player1Coffer, player1VisibleSquares);
+        deployPieces(player2Commands, player2PieceLocations, player2Coffer, player2VisibleSquares);
         
         // TODO: Resolve farming.
         
@@ -118,14 +120,42 @@ public class GameEngine {
         // Apply fog to resulting game state.
         //
         
-        applyFog(squares, player1Fog, player1Squares, player2PieceLocations, player1Player2PieceLocations, false);
-        applyFog(squares, player2Fog, player2Squares, player1PieceLocations, player2Player1PieceLocations, true);
+        driftFog(player1PieceLocations, player1Fog);
+        driftFog(player2PieceLocations, player2Fog);
+        
+        applyFog(player1Squares, player1Fog, player1VisibleSquares, player2PieceLocations, player1Player2PieceLocations);
+        applyFog(player2Squares, player2Fog, player2VisibleSquares, player1PieceLocations, player2Player1PieceLocations);
         
         turn += 1;
         
         return;
     }
     
+    private static void driftFog(Bijection<Piece, Location> playerPieceLocations, boolean[] fog) throws InvariantViolation {
+    
+        for (int i=0; i < Configuration.MAX_INDEX; i++) {
+            fog[i] = true;
+        }
+        
+        Enumeration<Piece> pieces = playerPieceLocations.getDomain().enumerate();
+        Piece piece;
+        
+        while(pieces.hasMoreElements()) {
+            piece = pieces.nextElement();
+            Enumeration<Location> inSight;
+            try {
+                inSight = Location.radius(playerPieceLocations.mapForward(piece), piece.getSight()).enumerate();
+            } catch (BijectionException e) {
+                throw new InvariantViolation();
+            }
+            Location location;
+            while(inSight.hasMoreElements()) {
+                location = inSight.nextElement();
+                fog[location.getIndex()] = false;
+            }
+        }
+    }
+
     private static void deployPieces(Map<Piece, Command> commands, Bijection<Piece, Location> pieceLocations,
             Coffer coffer, Square[] squares) throws InvariantViolation {
         Iterator<Map.Entry<Piece, Command>> iterator = commands.entrySet().iterator();
@@ -339,26 +369,18 @@ public class GameEngine {
         }
     }
 
-    private static void applyFog(Square[] squares, Boolean[] playerFog, Square[] playerSquares,
-            Bijection<Piece, Location> opponentPieceLocations, Bijection<Piece, Location> playerOpponentPieceLocations,
-            boolean invertSquaresIndex) throws InvariantViolation {
+    private static void applyFog(Square[] squares, boolean[] playerFog, Square[] playerSquares,
+            Bijection<Piece, Location> opponentPieceLocations, Bijection<Piece, Location> playerOpponentPieceLocations
+            ) throws InvariantViolation {
         playerOpponentPieceLocations.clear();
         Location location;
         Piece piece;
-        int squaresIndex;
-        
-        // TODO: Actually compute fog.
         
         for (int i=0; i<Configuration.MAX_INDEX; i++) {
-            if (invertSquaresIndex) {
-                squaresIndex = Configuration.MAX_INDEX - i - 1;
-            } else {
-                squaresIndex = i;
-            }
             if (playerFog[i]) {
-                playerSquares[i] = squares[squaresIndex].setState(Square.State.FOG);
+                playerSquares[i] = squares[i].setState(Square.State.FOG);
             } else {
-                playerSquares[i] = squares[squaresIndex];
+                playerSquares[i] = squares[i];
                 try {
                     location = Location.fromIndex(i);
                     if (opponentPieceLocations.codomainContains(location.invertPerspective())) {
@@ -374,29 +396,51 @@ public class GameEngine {
         }
     }
 
-    public GameEngine() {
+    public GameEngine() throws InvariantViolation {
         game = UUID.randomUUID();
         turn = 0;
         winner = 0;
         player1Coffer = new Coffer(Configuration.INITIAL_COFFER_AMOUNT);
         player2Coffer = new Coffer(Configuration.INITIAL_COFFER_AMOUNT);
-        squares = new Square[Configuration.MAX_INDEX];
+        player1Squares = new Square[Configuration.MAX_INDEX];
         player2Squares = new Square[Configuration.MAX_INDEX];
-        player2Squares = new Square[Configuration.MAX_INDEX];
-        player1Fog = new Boolean[Configuration.MAX_INDEX];
-        player2Fog = new Boolean[Configuration.MAX_INDEX];
+        player1VisibleSquares = new Square[Configuration.MAX_INDEX];
+        player2VisibleSquares = new Square[Configuration.MAX_INDEX];
         player1PieceLocations = new Bijection<Piece, Location>();
         player2PieceLocations = new Bijection<Piece, Location>();
         player1Player2PieceLocations = new Bijection<Piece, Location>();
         player2Player1PieceLocations = new Bijection<Piece, Location>();
+        
+        player1Fog = new boolean[Configuration.MAX_INDEX];
+        player2Fog = new boolean[Configuration.MAX_INDEX];
+        player1Emissions = new int[Configuration.MAX_INDEX];
+        player2Emissions = new int[Configuration.MAX_INDEX];
+        player1Occupancy = new int[Configuration.MAX_INDEX];
+        player2Occupancy = new int[Configuration.MAX_INDEX];
+        
+        for (int x=0; x < Configuration.MAX_X; x++) {
+            for (int y=0; y < Configuration.MAX_Y; y++) {
+                Location location;
+                try {
+                    location = new Location(x, y);
+                } catch (LocationDoesNotExist e) {
+                    throw new InvariantViolation();
+                }
+                player1Squares[location.getIndex()] = new Square(location, Square.State.BARREN, Square.Terrain.GRASSLAND);
+                player2Squares[location.getIndex()] = new Square(location, Square.State.BARREN, Square.Terrain.GRASSLAND);
+                player1VisibleSquares[location.getIndex()] = new Square(location, Square.State.FOG, Square.Terrain.GRASSLAND);
+                player2VisibleSquares[location.getIndex()] = new Square(location, Square.State.FOG, Square.Terrain.GRASSLAND);
+            }
+        }
     }
     
-    public int play(Player player1, Player player2, List<Observer> observers) throws InvariantViolation {
+    public int play(Player player1, Player player2, List<Observer> observers, int maxTurns) throws InvariantViolation {
         FullGameState fullGameState;
         GameState player1GameState, player2GameState;
         PlayerResponse player1Response, player2Response;
         
         while (winner == 0) {
+            System.out.println(turn);
             fullGameState = getFullGameState();
             player1GameState = getPlayerGameState(Perspective.PLAYER_ONE);
             player2GameState = getPlayerGameState(Perspective.PLAYER_TWO);
@@ -408,6 +452,8 @@ public class GameEngine {
             }
             
             resolveCommands(player1Response, player2Response);
+            
+            if (turn == maxTurns) break;
         }
         
         fullGameState = getFullGameState();

@@ -39,8 +39,15 @@ public class Piece {
 	    return uuid.hashCode();
 	}
 	
-	public boolean equals(Piece piece) {
-	    return piece.getUuid() == uuid;
+	@Override
+	public boolean equals(Object object) {
+	    Piece piece;
+	    if (object == null) return false;
+	    if (object.getClass() == this.getClass()) {
+	        piece = (Piece) object;
+	        return piece.getUuid() == uuid;
+	    }
+	    return false;
 	}
 	
 	public Piece(int strength, int toughness, int speed, int reach, int sight, int glory) {

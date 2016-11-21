@@ -17,7 +17,7 @@ public class Location {
     }
     
     public static Location inTheDirectionOf(Location from, Location to, int speed) {
-        int dx, dy, targetX, targetY;
+        int dx, dy, targetDx, targetDy, magnitude;
         double scaledDx, scaledDy;
         
         if (Location.distance(from, to) <= speed) {
@@ -26,25 +26,26 @@ public class Location {
         
         dx = to.getX() - from.getX();
         dy = to.getY() - from.getY();
-        scaledDx = (double) dx * speed / (dx + dy);
-        scaledDy = (double) dy * speed / (dx + dy);
+        magnitude = Math.abs(dx) + Math.abs(dy);
+        scaledDx = (double) dx * speed / magnitude;
+        scaledDy = (double) dy * speed / magnitude;
         
         if (scaledDx % 1 != 0) {
             if (scaledDx % 1 > scaledDy % 1) {
-                targetX = dx * speed / (dx + dy) + 1;
-                targetY = dy * speed / (dx + dy);
+                targetDx = dx * speed / magnitude + 1;
+                targetDy = dy * speed / magnitude;
                 
             } else {
-                targetX = dx * speed / (dx + dy);
-                targetY = dy * speed / (dx + dy) + 1;
+                targetDx = dx * speed / magnitude;
+                targetDy = dy * speed / magnitude + 1;
             }
         } else {
-            targetX = dx * speed / (dx + dy);
-            targetY = dx * speed / (dx + dy);
+            targetDx = dx * speed / magnitude;
+            targetDy = dy * speed / magnitude;
         }
         
         try {
-            return new Location(targetX, targetY);
+            return new Location(from.getX() + targetDx, from.getY() + targetDy);
         } catch (LocationDoesNotExist e) {
             return null;
         }
@@ -85,8 +86,15 @@ public class Location {
         return getIndex();
     }
     
-    public boolean equals(Location location) {
-        return location.getX() == x && location.getY() == y;
+    @Override
+    public boolean equals(Object object) {
+        Location location;
+        if (object == null) return false;
+        if (object.getClass() == this.getClass()) {
+            location = (Location) object;
+            return location.getX() == x && location.getY() == y;
+        }
+        return false;
     }
     
     public Location(int x, int y) throws LocationDoesNotExist {
@@ -111,7 +119,7 @@ public class Location {
     
     public Location invertPerspective() throws InvariantViolation {
         try {
-            return fromIndex(Configuration.MAX_INDEX - getIndex() - 1);
+            return new Location(Configuration.MAX_X - getX() - 1, Configuration.MAX_Y - getY() - 1);
         } catch (LocationDoesNotExist exception) {
             throw new InvariantViolation();
         }
