@@ -308,7 +308,7 @@ public class GameEngine {
                 throw new InvariantViolation();
             }
             command = playerCommands.get(playerPiece);
-            if (command.getWord() == Command.Word.EMIT) {
+            if (command.getWord() == Command.Word.ATTACK) {
                 target = command.getTarget();
                 if (Location.distance(pieceLocation, target) <= storedPiece.getReach()) {
                     playerEmissions[target.getIndex()] += storedPiece.getStrength();

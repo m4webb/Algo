@@ -3,7 +3,7 @@ package com.bamwebb.algo.core;
 public class Command {
 	
 	public enum Word {
-	    EMIT,
+	    ATTACK,
 		MOVE,
 		DEPLOY,
 		FARM,

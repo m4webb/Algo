@@ -19,4 +19,8 @@ public class ReadOnlyList<T> {
     public Enumeration<T> enumerate() {
         return Collections.enumeration(list);
     }
+    
+    public int size() {
+        return list.size();
+    }
 }

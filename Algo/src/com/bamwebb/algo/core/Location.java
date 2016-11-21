@@ -16,6 +16,39 @@ public class Location {
         return new Location(i/Configuration.MAX_Y, i%Configuration.MAX_Y);
     }
     
+    public static Location inTheDirectionOf(Location from, Location to, int speed) {
+        int dx, dy, targetX, targetY;
+        double scaledDx, scaledDy;
+        
+        if (Location.distance(from, to) <= speed) {
+            return to;
+        }
+        
+        dx = to.getX() - from.getX();
+        dy = to.getY() - from.getY();
+        scaledDx = (double) dx * speed / (dx + dy);
+        scaledDy = (double) dy * speed / (dx + dy);
+        
+        if (scaledDx % 1 != 0) {
+            if (scaledDx % 1 > scaledDy % 1) {
+                targetX = dx * speed / (dx + dy) + 1;
+                targetY = dy * speed / (dx + dy);
+                
+            } else {
+                targetX = dx * speed / (dx + dy);
+                targetY = dy * speed / (dx + dy) + 1;
+            }
+        } else {
+            targetX = dx * speed / (dx + dy);
+            targetY = dx * speed / (dx + dy);
+        }
+        
+        try {
+            return new Location(targetX, targetY);
+        } catch (LocationDoesNotExist e) {
+            return null;
+        }
+    }
 
     public static int distance(Location locationOne, Location locationTwo) {
         int dx = Math.abs(locationOne.getX() - locationTwo.getX());
