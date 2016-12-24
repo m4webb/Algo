@@ -1,6 +1,5 @@
 package com.bamwebb.algo.core;
 
-import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -10,7 +9,6 @@ import com.bamwebb.algo.core.Coffer.CofferEmpty;
 import com.bamwebb.algo.core.Location.LocationDoesNotExist;
 import com.bamwebb.algo.data.Bijection;
 import com.bamwebb.algo.data.Bijection.BijectionException;
-import com.bamwebb.algo.data.ReadOnlyArray;
 
 public class GameEngine {
     
@@ -44,24 +42,21 @@ public class GameEngine {
     private int[] player2Occupancy;
      
     private FullGameState getFullGameState() {
-        return new FullGameState(game, winner, turn, player1Coffer.getReadOnlyCoffer(), player2Coffer.getReadOnlyCoffer(),
-                new ReadOnlyArray<Square>(player1Squares), new ReadOnlyArray<Square>(player2Squares), 
-                player1PieceLocations.getForwardReadOnlyMap(), player2PieceLocations.getForwardReadOnlyMap(),
-                player1PieceLocations.getBackwardReadOnlyMap(), player2PieceLocations.getBackwardReadOnlyMap());
+        return new FullGameState(game, winner, turn, player1Coffer, player2Coffer,
+                player1Squares, player2Squares, 
+                player1PieceLocations, player2PieceLocations);
     }
 
     private GameState getPlayerGameState(Perspective perspective) {
         Board board;
         if(perspective == Perspective.PLAYER_ONE) {
-            board = new Board(new ReadOnlyArray<Square>(player1VisibleSquares), player1PieceLocations.getForwardReadOnlyMap(),
-                    player1Player2PieceLocations.getForwardReadOnlyMap(), player1PieceLocations.getBackwardReadOnlyMap(),
-                    player1Player2PieceLocations.getBackwardReadOnlyMap());
-            return new GameState(game, winner, turn, player1Coffer.getReadOnlyCoffer(), board);
+            board = new Board(player1VisibleSquares, player1PieceLocations,
+                    player1Player2PieceLocations);
+            return new GameState(game, winner, turn, player1Coffer, board);
         } else {
-            board = new Board(new ReadOnlyArray<Square>(player2VisibleSquares), player2PieceLocations.getForwardReadOnlyMap(),
-                   player2Player1PieceLocations.getForwardReadOnlyMap(), player2PieceLocations.getBackwardReadOnlyMap(),
-                        player2Player1PieceLocations.getBackwardReadOnlyMap());
-            return new GameState(game, winner, turn, player2Coffer.getReadOnlyCoffer(), board);
+            board = new Board(player2VisibleSquares, player2PieceLocations,
+                   player2Player1PieceLocations);
+            return new GameState(game, winner, turn, player2Coffer, board);
         }
     }
     
@@ -137,20 +132,14 @@ public class GameEngine {
             fog[i] = true;
         }
         
-        Enumeration<Piece> pieces = playerPieceLocations.getDomain().enumerate();
-        Piece piece;
-        
-        while(pieces.hasMoreElements()) {
-            piece = pieces.nextElement();
-            Enumeration<Location> inSight;
+        for (Piece piece : playerPieceLocations.getDomain()) {
+            List<Location> inSight;
             try {
-                inSight = Location.radius(playerPieceLocations.mapForward(piece), piece.getSight()).enumerate();
+                inSight = Location.radius(playerPieceLocations.mapForward(piece), piece.getSight());
             } catch (BijectionException e) {
                 throw new InvariantViolation();
             }
-            Location location;
-            while(inSight.hasMoreElements()) {
-                location = inSight.nextElement();
+            for(Location location : inSight) {
                 fog[location.getIndex()] = false;
             }
         }
@@ -207,13 +196,8 @@ public class GameEngine {
         Bijection<Piece, Location> playerPieceLocationsHolder = new Bijection<Piece, Location>();
         Command command;
         Location pieceLocation, target;
-        Piece storedPiece;
-        Enumeration<Piece> allPieces, movedPieces;
-        
         try {
-            allPieces = playerPieceLocations.getDomain().enumerate();
-            while(allPieces.hasMoreElements()) {
-                storedPiece = allPieces.nextElement();
+            for (Piece storedPiece : playerPieceLocations.getDomain()) {
                 pieceLocation = playerPieceLocations.mapForward(storedPiece);
                 if (!playerCommands.containsKey(storedPiece)) {
                     continue;
@@ -229,9 +213,8 @@ public class GameEngine {
                 playerPieceLocationsHolder.addPairing(storedPiece, target);
                 playerPieceLocations.removePairing(storedPiece, pieceLocation);
             }
-            movedPieces = playerPieceLocationsHolder.getDomain().enumerate();
-            while(movedPieces.hasMoreElements()) {
-                storedPiece = movedPieces.nextElement();
+            
+            for (Piece storedPiece : playerPieceLocationsHolder.getDomain()) {
                 pieceLocation = playerPieceLocationsHolder.mapForward(storedPiece);
                 playerPieceLocations.addPairing(storedPiece, pieceLocation);
             }
@@ -278,15 +261,12 @@ public class GameEngine {
             int[] playerOccupancy) throws InvariantViolation {
         Command command;
         Location pieceLocation, target;
-        Piece storedPiece;
-        Enumeration<Piece> allPieces = playerPieceLocations.getDomain().enumerate();
         
         for (int i=0; i<Configuration.MAX_INDEX; i++) {
             playerOccupancy[i] = 0;
         }
         
-        while(allPieces.hasMoreElements()) {
-            storedPiece = allPieces.nextElement();
+        for (Piece storedPiece : playerPieceLocations.getDomain()) {
             try {
                 pieceLocation = playerPieceLocations.mapForward(storedPiece);
             } catch (BijectionException exception) {
@@ -340,7 +320,7 @@ public class GameEngine {
             command = playerCommands.get(playerPiece);
             if (command.getWord() == Command.Word.ATTACK) {
                 target = command.getTarget();
-                if (Location.distance(pieceLocation, target) <= storedPiece.getReach()) {
+                if (Location.distance(pieceLocation, target) <= storedPiece.getRange()) {
                     playerEmissions[target.getIndex()] += storedPiece.getStrength();
                 }
             }
@@ -349,11 +329,8 @@ public class GameEngine {
     
     private static void eliminatePieces(Bijection<Piece, Location> playerPieceLocations, int[] opponentEmissions)
             throws InvariantViolation {
-        Enumeration<Piece> playerPiecesEnumeration = playerPieceLocations.getDomain().enumerate();
-        Piece piece;
         Location location;
-        while (playerPiecesEnumeration.hasMoreElements()) {
-            piece = playerPiecesEnumeration.nextElement();
+        for (Piece piece : playerPieceLocations.getDomain()) {
             try {
                 location = playerPieceLocations.mapForward(piece);
             } catch (BijectionException exception) {
@@ -426,8 +403,8 @@ public class GameEngine {
                 } catch (LocationDoesNotExist e) {
                     throw new InvariantViolation();
                 }
-                player1Squares[location.getIndex()] = new Square(location, Square.State.BARREN, Square.Terrain.GRASSLAND);
-                player2Squares[location.getIndex()] = new Square(location, Square.State.BARREN, Square.Terrain.GRASSLAND);
+                player1Squares[location.getIndex()] = new Square(location, Square.State.UNOCCUPIED, Square.Terrain.GRASSLAND);
+                player2Squares[location.getIndex()] = new Square(location, Square.State.UNOCCUPIED, Square.Terrain.GRASSLAND);
                 player1VisibleSquares[location.getIndex()] = new Square(location, Square.State.FOG, Square.Terrain.GRASSLAND);
                 player2VisibleSquares[location.getIndex()] = new Square(location, Square.State.FOG, Square.Terrain.GRASSLAND);
             }
@@ -440,7 +417,6 @@ public class GameEngine {
         PlayerResponse player1Response, player2Response;
         
         while (winner == 0) {
-            System.out.println(turn);
             fullGameState = getFullGameState();
             player1GameState = getPlayerGameState(Perspective.PLAYER_ONE);
             player2GameState = getPlayerGameState(Perspective.PLAYER_TWO);

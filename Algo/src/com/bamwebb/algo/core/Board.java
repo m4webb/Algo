@@ -1,96 +1,123 @@
 package com.bamwebb.algo.core;
 
-import com.bamwebb.algo.data.ReadOnlyArray;
-import com.bamwebb.algo.data.ReadOnlyList;
-import com.bamwebb.algo.data.ReadOnlyMap;
+import java.util.List;
+
+import com.bamwebb.algo.data.Bijection;
+import com.bamwebb.algo.data.Bijection.BijectionException;
 
 public class Board {
     
     public static class PieceNotOnBoard extends Exception {}
     public static class LocationHasNoPiece extends Exception {}
     
-    final private ReadOnlyArray<Square> squares;
-    final private ReadOnlyMap<Piece, Location> pieceLocations;
-    final private ReadOnlyMap<Piece, Location> opponentPieceLocations;
-    final private ReadOnlyMap<Location, Piece> locationPieces;
-    final private ReadOnlyMap<Location, Piece> locationOpponentPieces;
+    final private Square[] squares;
+    final private Bijection<Piece, Location> pieceLocations;
+    final private Bijection<Piece, Location> opponentPieceLocations;
     
-
-    public Board(ReadOnlyArray<Square> squares, ReadOnlyMap<Piece, Location> pieceLocations,
-            ReadOnlyMap<Piece, Location> opponentPieceLocations, ReadOnlyMap<Location, Piece> locationPieces,
-            ReadOnlyMap<Location, Piece> locationOpponentPieces ) {
+    public Board(Square[] squares, Bijection<Piece, Location> pieceLocations,
+            Bijection<Piece, Location> opponentPieceLocations ) {
         this.squares = squares;
         this.pieceLocations = pieceLocations;
         this.opponentPieceLocations = opponentPieceLocations;
-        this.locationPieces = locationPieces;
-        this.locationOpponentPieces = locationOpponentPieces;
-    }
-    
-    public ReadOnlyArray<Square> getSquares() {
-        return squares;
-    }
-    
-    public ReadOnlyMap<Piece, Location> getPieceLocations() {
-        return pieceLocations;
-    }
-    
-    public ReadOnlyMap<Piece, Location> getOpponentPieceLocations() {
-        return opponentPieceLocations;
-    }
-    
-    public ReadOnlyMap<Location, Piece> getLocationPieces() {
-        return locationPieces;
-    }
-    
-    public ReadOnlyMap<Location, Piece> getlocationOpponentPieces() {
-        return locationOpponentPieces;
-    }
-    
-    public ReadOnlyList<Piece> getPieces() {
-        return pieceLocations.keyList();
-    }
-    
-    public ReadOnlyList<Piece> getOpponentPieces() {
-        return opponentPieceLocations.keyList();
-    }
-    
-    public ReadOnlyList<Location> getLocations() {
-        return locationPieces.keyList();
-    }
-    
-    public ReadOnlyList<Location> getOpponentLocations() {
-        return locationOpponentPieces.keyList();
     }
     
     public Square getSquare(Location location) {
-        return squares.getIndex(location.getIndex());
+        return squares[location.getIndex()];
+    }
+    
+    public List<Piece> getPieces() {
+        return pieceLocations.getDomain();
+    }
+    
+    public List<Piece> getOpponentPieces() {
+        return opponentPieceLocations.getDomain();
+    }
+    
+    public List<Location> getLocations() {
+        return pieceLocations.getCodomain();
+    }
+    
+    public List<Location> getOpponentLocations() {
+        return opponentPieceLocations.getCodomain();
     }
     
     public Location getLocation(Piece piece) throws PieceNotOnBoard {
-        if(!(pieceLocations.containsKey(piece))){
+        try {
+            return pieceLocations.mapForward(piece);
+        } catch (BijectionException e) {
             throw new PieceNotOnBoard();
         }
-        return pieceLocations.get(piece);
+    }
+    
+    public Location getLocationOrNull(Piece piece) {
+        try {
+            return pieceLocations.mapForward(piece);
+        } catch (BijectionException e) {
+            return null;
+        }
     }
     
     public Location getOpponentLocation(Piece piece) throws PieceNotOnBoard {
-        if(!(opponentPieceLocations.containsKey(piece))) {
-            throw new PieceNotOnBoard();
+       try {
+           return opponentPieceLocations.mapForward(piece);
+       } catch (BijectionException e) {
+           throw new PieceNotOnBoard();
+       }
+    }
+    
+    public Location getOpponentLocationOrNull(Piece piece) {
+        try {
+            return opponentPieceLocations.mapForward(piece);
+        } catch (BijectionException e) {
+            return null;
         }
-        return opponentPieceLocations.get(piece);
     }
     
     public Piece getPiece(Location location) throws LocationHasNoPiece {
-        if(!(locationPieces.containsKey(location))) {
+        try {
+            return pieceLocations.mapBackward(location);
+        } catch (BijectionException e) {
             throw new LocationHasNoPiece();
         }
-        return locationPieces.get(location);
+    }
+    
+    public Piece getPieceOrNull(Location location) {
+        try {
+            return pieceLocations.mapBackward(location);
+        } catch (BijectionException e) {
+            return null;
+        }
     }
     
     public Piece getOpponentPiece(Location location) throws LocationHasNoPiece {
-        if(!(locationOpponentPieces.containsKey(location))) {
+        try {
+            return opponentPieceLocations.mapBackward(location);
+        } catch (BijectionException e) {
             throw new LocationHasNoPiece();
         }
-        return locationOpponentPieces.get(location);
+    }
+    
+    public Piece getOpponentPieceOrNull(Location location) {
+        try {
+            return opponentPieceLocations.mapBackward(location);
+        } catch (BijectionException e) {
+            return null;
+        }
+    }
+    
+    public boolean locationHasPiece(Location location) {
+        return pieceLocations.codomainContains(location);
+    }
+    
+    public boolean locationHasOpponentPiece(Location location) {
+        return opponentPieceLocations.codomainContains(location);
+    }
+    
+    public boolean pieceOnBoard(Piece piece) {
+        return pieceLocations.domainContains(piece);
+    }
+    
+    public boolean opponentPieceOnBoard(Piece piece) {
+        return opponentPieceLocations.domainContains(piece);
     }
 }

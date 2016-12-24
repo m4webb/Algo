@@ -2,6 +2,7 @@ package com.bamwebb.algo.data;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class Bijection<A,B> {
@@ -19,6 +20,11 @@ public class Bijection<A,B> {
     public Bijection() {
         mapAB = new HashMap<A, B>();
         mapBA = new HashMap<B, A>();
+    }
+    
+    public Bijection(Bijection<A,B> b) {
+        mapAB = b.getForwardMap();
+        mapBA = b.getBackwardMap();
     }
     
     public void clear() {
@@ -85,19 +91,23 @@ public class Bijection<A,B> {
         }
     }
     
-    public ReadOnlyMap<A,B> getForwardReadOnlyMap() {
-        return new ReadOnlyMap<A,B>(mapAB);
+    public Map<A,B> getForwardMap() {
+        return new HashMap<A,B>(mapAB);
     }
     
-    public ReadOnlyMap<B,A> getBackwardReadOnlyMap() {
-        return new ReadOnlyMap<B,A>(mapBA);
+    public Map<B,A> getBackwardMap() {
+        return new HashMap<B,A>(mapBA);
     }
     
-    public ReadOnlyList<A> getDomain() {
-        return new ReadOnlyList<A>(new ArrayList<A>(mapAB.keySet()));
+    public List<A> getDomain() {
+        return new ArrayList<A>(mapAB.keySet());
     }
     
-    public ReadOnlyList<B> getCodomain() {
-        return new ReadOnlyList<B>(new ArrayList<B>(mapBA.keySet()));
+    public List<B> getCodomain() {
+        return new ArrayList<B>(mapBA.keySet());
+    }
+    
+    public int size() {
+        return mapAB.size();
     }
 }

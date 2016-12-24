@@ -4,7 +4,7 @@ public class Square {
     
     public enum State {
         FOG,
-        BARREN,
+        UNOCCUPIED,
         PROPERTY,
         OPPONENT_PROPERTY,
     }
@@ -35,15 +35,7 @@ public class Square {
 	    return terrain;
 	}
 	
-	public Square setLocation(Location location) {
-	    return new Square(location, state, terrain);
-	}
-	
 	public Square setState(State state) {
-	    return new Square(location, state, terrain);
-	}
-	
-	public Square setTerrain(Terrain terrain) {
 	    return new Square(location, state, terrain);
 	}
 	

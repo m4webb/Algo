@@ -7,7 +7,7 @@ public class Piece {
 	final private int strength;
 	final private int toughness;
 	final private int speed;
-	final private int reach;
+	final private int range;
 	final private int sight;
 	final private int glory;
 	final private UUID uuid;
@@ -16,20 +16,20 @@ public class Piece {
 		int strength = piece.getStrength();
 		int toughness = piece.getToughness();
 		int speed = piece.getSpeed();
-		int reach = piece.getReach();
+		int range = piece.getRange();
 		int sight = piece.getSight();
 		int glory = piece.getGlory();
 		
 		double strengthCost = Math.exp((double)strength/Configuration.STRENGTH_PER_UNIT_COST);
 		double toughnessCost = Math.exp((double)toughness/Configuration.TOUGHNESS_PER_UNIT_COST);
 		double speedCost = Math.exp((double)speed/Configuration.SPEED_PER_UNIT_COST);
-		double reachCost = Math.exp((double)reach/Configuration.REACH_PER_UNIT_COST);
+		double reachCost = Math.exp((double)range/Configuration.REACH_PER_UNIT_COST);
 		double sightCost = Math.exp((double)sight/Configuration.SIGHT_PER_UNIT_COST);
 		double gloryCost = Math.exp((double)glory/Configuration.GLORY_PER_UNIT_COST);
 		
-		int totalCost = (int)Math.sqrt(Math.pow(strengthCost, 2) + Math.pow(toughnessCost, 2) +
+		int totalCost = (int)(Math.sqrt(Math.pow(strengthCost, 2) + Math.pow(toughnessCost, 2) +
 		        Math.pow(speedCost, 2) + Math.pow(reachCost, 2) + Math.pow(sightCost, 2) +
-		        Math.pow(gloryCost, 2));
+		        Math.pow(gloryCost, 2)) * Configuration.COST_TO_FARM_UNITS_MULTIPLIER);
 		
 		return totalCost;
 	}
@@ -50,11 +50,11 @@ public class Piece {
 	    return false;
 	}
 	
-	public Piece(int strength, int toughness, int speed, int reach, int sight, int glory) {
+	public Piece(int strength, int toughness, int speed, int range, int sight, int glory) {
 	    this.strength = strength;
 		this.toughness = toughness;
 		this.speed = speed;
-		this.reach = reach;
+		this.range = range;
 		this.sight = sight;
 		this.glory = glory;
 		this.uuid = UUID.randomUUID();
@@ -72,8 +72,8 @@ public class Piece {
 		return speed;
 	}
 	
-	public int getReach() {
-		return reach;
+	public int getRange() {
+		return range;
 	}
 	
 	public int getSight() {
